@@ -1,0 +1,76 @@
+#!/bin/sh
+#
+# nsq - this script starts and stops the nsq daemon
+#
+# chkconfig:   - 85 15
+# description:  nsq is a realtime distributed messaging platform designed to operate at scale, handling billions of messages per day
+# processname: conn_server
+# pidfile:     /var/run/conn_server.pid
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+# Source networking configuration.
+# . /etc/sysconfig/network
+
+# Check that networking is up.
+[ "$NETWORKING" = "no" ] && exit 0
+
+conn_server="$DU_BIN/conn_server"
+prog=$(basename $conn_server)
+
+config="$DU_SERVER/configs/$prog"
+
+lockfile="/var/lock/subsys/${prog}"
+pidfile="/var/run/${prog}.pid"
+
+start() {
+    [ -x $conn_server ] || exit 5
+    [ -f $config ] || exit 6
+    echo -n $"Starting $prog: "
+    daemon $conn_server $config
+    # $conn_server &
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && touch $lockfile
+    return $retval
+}
+
+stop() {
+    echo -n $"Stopping $prog: "
+    killproc -p $pidfile $prog
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && rm -f $lockfile
+    return $retval
+}
+
+restart() {
+    stop
+    start
+}
+
+rh_status() {
+    status $prog
+}
+
+rh_status_q() {
+    rh_status >/dev/null 2>&1
+}
+
+case "$1" in
+    start)
+        rh_status_q && exit 0
+        $1
+        ;;
+    stop)
+        rh_status_q || exit 0
+        $1
+        ;;
+    restart)
+        $1
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|restart}"
+        exit 2
+esac

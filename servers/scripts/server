@@ -1,0 +1,104 @@
+#!/bin/bash
+
+source $HOME/.profile
+
+DU_SERVERS=".."
+SERVER_LIST="db_server msg_server conn_server status_server status_db_server team_server msg_center_server file_server rest_server syslog_server"
+
+stop_server() {
+	for svr in $*
+	do
+		#停掉服务
+		killall $svr 2>>/dev/null
+		echo "stop $svr success"
+	done
+}
+
+start_server() {
+	for svr in $*
+	do
+		#start server
+		$DU_SERVERS/bin/$svr $DU_SERVERS/configs/$svr.conf &
+		echo "start $svr success"
+	done
+}
+
+build_start_server() {
+	for svr in $*
+	do
+		#重新编译开启服务
+		go build -o $DU_SERVERS/bin/$svr $DU_SERVERS/$svr.go && $DU_SERVERS/bin/$svr $DU_SERVERS/configs/$svr.conf &
+		echo "build_start $svr success"
+	done
+
+}
+
+build_server() {
+	for svr in $*
+	do
+		#build server
+		go build -o $DU_SERVERS/bin/$svr $DU_SERVERS/$svr.go  
+		echo "build $svr success"
+	done
+}
+
+restart_server() {
+	for svr in $*
+	do
+		#停掉服务
+		killall $svr 2>>/dev/null
+		#重新编译开启服务
+		$DU_SERVERS/bin/$svr $DU_SERVERS/configs/$svr.conf &
+		echo "restart $svr success"
+	done
+}
+
+build_restart_server() {
+	for svr in $*
+	do
+		#停掉服务
+		killall $svr 2>>/dev/null
+		#重新编译开启服务
+		go build -o $DU_SERVERS/bin/$svr $DU_SERVERS/$svr.go && $DU_SERVERS/bin/$svr $DU_SERVERS/configs/$svr.conf &
+		echo "build_restart $svr success"
+	done
+}
+
+#获得服务名列表
+if [ $# -le 1 ]; then 
+	svr_list=$SERVER_LIST
+else
+	i=2
+	while [ $i -le $# ]
+	do
+		temp=`eval echo '$'$i`
+		svr_list=$svr_list" "$temp
+		i=$((i+1))
+	done
+fi
+
+case $1 in 
+	build)
+		build_server $svr_list
+		;;
+	start)
+		start_server $svr_list
+		;;
+	start_b)
+		build_start_server $svr_list
+		;;
+	stop)
+		stop_server $svr_list
+		;;
+	restart)
+		restart_server $svr_list
+		;;
+	restart_b)
+		build_restart_server $svr_list
+		;;
+	*)
+		echo "Usage $0 build|start|start_b|stop|restart|restart_b svr_name..."
+		exit 0
+		;;
+esac
+#Usage: ./restart_server svr_name...
